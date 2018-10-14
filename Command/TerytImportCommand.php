@@ -31,6 +31,11 @@ abstract class TerytImportCommand extends ContainerAwareCommand
 
     private $recordsCount = 0;
 
+    public function __construct(\FSi\Bundle\TerytDatabaseBundle\Teryt\Api\Client $api_client)
+    {
+        parent::__construct();
+    }
+
     /**
      * @param SimpleXMLElement $node
      * @param \Doctrine\Common\Persistence\ObjectManager $om

@@ -16,6 +16,15 @@ use Symfony\Component\Filesystem\Filesystem;
 
 abstract class TerytDownloadCommand extends ContainerAwareCommand
 {
+    public $api_client;
+
+    public function __construct(\FSi\Bundle\TerytDatabaseBundle\Teryt\Api\Client $api_client)
+    {
+        $this->api_client = $api_client;
+
+        parent::__construct();
+    }
+
     protected function getDefaultTargetPath()
     {
         return $this->getContainer()->getParameter('kernel.root_dir') . '/teryt';
@@ -23,7 +32,7 @@ abstract class TerytDownloadCommand extends ContainerAwareCommand
 
     protected function getApiClient() : Client
     {
-        return $this->getContainer()->get('fsi_teryt_db.api_client');
+        return $this->api_client;
     }
 
     protected function saveFile(SplTempFileObject $file, string $path, string $fileName)
