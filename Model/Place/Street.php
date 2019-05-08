@@ -60,6 +60,17 @@ class Street
     }
 
     /**
+     * @param Place $placce
+     * @return Street
+     */
+    public function setPlace($place)
+    {
+        $this->place = $place;
+
+        return $this;
+    }
+
+    /**
      * @return int
      */
     public function getId()
