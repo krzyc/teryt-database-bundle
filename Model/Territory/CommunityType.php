@@ -7,6 +7,8 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Model\Territory;
 
 use Doctrine\Common\Collections\ArrayCollection;
@@ -25,50 +27,36 @@ class CommunityType
     protected $name;
 
     /**
-     * @var Collection|Community[]
+     * @var Collection<int, Community>
      */
     protected $communities;
 
-    /**
-     * @param int $type
-     */
-    public function __construct($type)
+    public function __construct(int $type, string $name)
     {
         $this->type = $type;
+        $this->name = $name;
         $this->communities = new ArrayCollection();
     }
 
-    /**
-     * @return int
-     */
-    public function getType()
+    public function getType(): int
     {
         return $this->type;
     }
 
-    /**
-     * @param string $name
-     * @return CommunityType
-     */
-    public function setName($name)
+    public function setName(string $name): void
     {
         $this->name = $name;
-
-        return $this;
     }
 
-    /**
-     * @return string
-     */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
 
     /**
-     * @return Collection|Community[]
+     * @return Collection<int, Community>
      */
-    public function getCommunities()
+    public function getCommunities(): Collection
     {
         return $this->communities;
     }

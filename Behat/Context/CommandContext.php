@@ -1,11 +1,19 @@
 <?php
 
+/**
+ * (c) FSi sp. z o.o. <info@fsi.pl>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Behat\Context;
 
+use Assert\Assertion;
 use Behat\Symfony2Extension\Context\KernelAwareContext;
 use FSi\Bundle\TerytDatabaseBundle\Behat\Context\Console\ApplicationTester;
-use Guzzle\Http\Message\Response;
-use Guzzle\Plugin\Mock\MockPlugin;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\HttpKernel\KernelInterface;
 
@@ -31,17 +39,12 @@ class CommandContext implements KernelAwareContext
      */
     protected $fixturesPath;
 
-    public function __construct($fixturesPath)
+    public function __construct(string $fixturesPath)
     {
         $this->fixturesPath = $fixturesPath;
     }
 
-    /**
-     * Sets Kernel instance.
-     *
-     * @param KernelInterface $kernel HttpKernel instance
-     */
-    public function setKernel(KernelInterface $kernel)
+    public function setKernel(KernelInterface $kernel): void
     {
         $this->kernel = $kernel;
     }
@@ -49,29 +52,31 @@ class CommandContext implements KernelAwareContext
     /**
      * @When /^I successfully run console command "([^"]*)"$/
      */
-    public function iRunConsoleCommand($command)
+    public function iRunConsoleCommand(string $command): void
     {
         $application = new Application($this->kernel);
         $tester = new ApplicationTester($application);
 
-        expect($tester->run($command))->toBe(0);
+        Assertion::eq($tester->run([$command]), 0);
         $this->lastCommandOutput = $tester->getDisplay(true);
     }
 
     /**
      * @When /^I run console command "([^"]*)" with argument "--([^"]*)=([^"]*)"$/
      */
-    public function iRunConsoleCommandWithArgument($command, $argument, $value = 1)
+    public function iRunConsoleCommandWithArgument(string $command, string $argument, string $value = ''): void
     {
         $application = new Application($this->kernel);
         $tester = new ApplicationTester($application);
 
         $value = $this->prepareValue($argument, $value);
 
-        $this->lastCommandExitCode = $tester->run(array(
+        $this->lastCommandExitCode = $tester->run(
+            [
             $command,
             $argument => $value
-        ));
+            ]
+        );
 
         $this->lastCommandOutput = $tester->getDisplay(true);
     }
@@ -79,15 +84,15 @@ class CommandContext implements KernelAwareContext
     /**
      * @When /^I unsuccessfully run console command "([^"]*)" with argument "--([^"]*)=([^"]*)"$/
      */
-    public function iUnsuccessfullyRunConsoleCommandWithArgument($command, $argument, $value)
+    public function iUnsuccessfullyRunConsoleCommandWithArgument(string $command, string $argument, string $value): void
     {
         $application = new Application($this->kernel);
         $tester = new ApplicationTester($application);
 
-        expect($tester->run(array(
+        Assertion::eq($tester->run([
             $command,
             $argument => $value
-        )))->toBe(1);
+        ]), 1);
 
         $this->lastCommandOutput = $tester->getDisplay(true);
     }
@@ -96,17 +101,17 @@ class CommandContext implements KernelAwareContext
     /**
      * @When /^I successfully run console command "([^"]*)" with argument "--([^"]*)=([^"]*)"$/
      */
-    public function iSuccessfullyRunConsoleCommandWithArgument($command, $argument, $value)
+    public function iSuccessfullyRunConsoleCommandWithArgument(string $command, string $argument, string $value): void
     {
         $application = new Application($this->kernel);
         $tester = new ApplicationTester($application);
 
         $value = $this->prepareValue($argument, $value);
 
-        expect($tester->run(array(
+        Assertion::eq($tester->run([
             $command,
             $argument => $value
-        )))->toBe(0);
+        ]), 0);
 
         $this->lastCommandOutput = $tester->getDisplay(true);
     }
@@ -115,30 +120,20 @@ class CommandContext implements KernelAwareContext
      * @Then /^I should see "([^"]*)" console output$/
      * @Given /^I should see "([^"]*)" output at console$/
      */
-    public function iShouldSeeOutputAtConsole($consoleOutput)
+    public function iShouldSeeOutputAtConsole(string $consoleOutput): void
     {
-        expect(trim($this->getLastCommandOutput()))->toBe($consoleOutput);
+        Assertion::eq(trim($this->getLastCommandOutput()), $consoleOutput);
     }
 
-    /**
-     * @return mixed
-     */
-    public function getLastCommandOutput()
+    public function getLastCommandOutput(): string
     {
         return $this->lastCommandOutput;
     }
 
-    /**
-     * @param $argument
-     * @param $value
-     * @return string
-     */
-    public function prepareValue($argument, $value)
+    public function prepareValue(string $argument, string $value): string
     {
-        switch ($argument) {
-            case 'file':
-                $value = $this->kernel->getRootDir() . DIRECTORY_SEPARATOR . $value;
-                break;
+        if ($argument === 'file') {
+            return $this->kernel->getRootDir() . DIRECTORY_SEPARATOR . $value;
         }
 
         return $value;

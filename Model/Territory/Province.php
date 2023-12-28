@@ -7,6 +7,8 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Model\Territory;
 
 use Doctrine\Common\Collections\ArrayCollection;
@@ -15,23 +17,21 @@ use Doctrine\Common\Collections\Collection;
 class Province extends Territory
 {
     /**
-     * @var Collection|District[]
+     * @var Collection<int, District>
      */
     protected $districts;
 
-    /**
-     * @param int $code
-     */
-    public function __construct($code)
+    public function __construct(int $code, string $name)
     {
-        parent::__construct($code);
+        parent::__construct($code, $name);
+
         $this->districts = new ArrayCollection();
     }
 
     /**
-     * @return Collection|District[]
+     * @return Collection<int, District>
      */
-    public function getDistricts()
+    public function getDistricts(): Collection
     {
         return $this->districts;
     }

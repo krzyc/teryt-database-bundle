@@ -7,8 +7,12 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Exception;
 
-class TerritorialDivisionNodeConverterException extends \RuntimeException
+use RuntimeException;
+
+class TerritorialDivisionNodeConverterException extends RuntimeException
 {
 }

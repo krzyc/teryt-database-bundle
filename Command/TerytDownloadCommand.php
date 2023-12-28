@@ -7,45 +7,61 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Command;
 
+use Assert\Assertion;
 use FSi\Bundle\TerytDatabaseBundle\Teryt\Api\Client;
 use SplTempFileObject;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Filesystem\Filesystem;
 
-abstract class TerytDownloadCommand extends ContainerAwareCommand
+abstract class TerytDownloadCommand extends Command
 {
-    public $api_client;
+    /**
+     * @var Client
+     */
+    private $client;
 
-    public function __construct(\FSi\Bundle\TerytDatabaseBundle\Teryt\Api\Client $api_client)
+    /**
+     * @var string
+     */
+    private $projectDir;
+
+    public function __construct(Client $client, string $projectDir)
     {
-        $this->api_client = $api_client;
-
         parent::__construct();
+
+        $this->client = $client;
+        $this->projectDir = $projectDir;
     }
 
-    protected function getDefaultTargetPath()
+    protected function getDefaultTargetPath(): string
     {
-        return $this->getContainer()->getParameter('kernel.root_dir') . '/teryt';
+        return $this->projectDir . '/teryt';
     }
 
-    protected function getApiClient() : Client
+    protected function getApiClient(): Client
     {
-        return $this->api_client;
+        return $this->client;
     }
 
-    protected function saveFile(SplTempFileObject $file, string $path, string $fileName)
+    protected function saveFile(SplTempFileObject $file, string $path, string $fileName): void
     {
         $filesystem = new Filesystem();
-        $filesystem->dumpFile(sprintf('%s/%s', $path, $fileName), $file->fread($this->getFileSize($file)));
+        $content = $file->fread($this->getFileSize($file));
+        Assertion::string($content);
+
+        $filesystem->dumpFile(sprintf('%s/%s', $path, $fileName), $content);
     }
 
-    private function getFileSize(SplTempFileObject $file) : int
+    private function getFileSize(SplTempFileObject $file): int
     {
         $file->fseek(0, SEEK_END);
         $size = $file->ftell();
-        $file->fseek(0, SEEK_SET);
+        $file->fseek(0);
+        Assertion::integer($size);
 
         return $size;
     }

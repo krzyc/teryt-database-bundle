@@ -1,12 +1,32 @@
 <?php
 
+/**
+ * (c) FSi sp. z o.o. <info@fsi.pl>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Behat\Context;
 
+use Assert\Assertion;
 use Behat\Gherkin\Node\PyStringNode;
 use Behat\Gherkin\Node\TableNode;
 use Behat\Symfony2Extension\Context\KernelAwareContext;
-use Behat\Symfony2Extension\Context\KernelAwareInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\ObjectManager;
+use FSi\Bundle\TerytDatabaseBundle\Entity\District;
+use FSi\Bundle\TerytDatabaseBundle\Entity\Place;
+use FSi\Bundle\TerytDatabaseBundle\Entity\PlaceType;
+use FSi\Bundle\TerytDatabaseBundle\Entity\Province;
+use FSi\Bundle\TerytDatabaseBundle\Entity\Street;
 use Symfony\Component\HttpKernel\KernelInterface;
+use FSi\Bundle\TerytDatabaseBundle\Entity\Community;
+use FSi\Bundle\TerytDatabaseBundle\Entity\CommunityType;
 
 class ImportTerytCommandContext implements KernelAwareContext
 {
@@ -20,17 +40,12 @@ class ImportTerytCommandContext implements KernelAwareContext
      */
     protected $fixturesPath;
 
-    function __construct($fixturesPath)
+    public function __construct(string $fixturesPath)
     {
         $this->fixturesPath = $fixturesPath;
     }
 
-    /**
-     * Sets Kernel instance.
-     *
-     * @param KernelInterface $kernel HttpKernel instance
-     */
-    public function setKernel(KernelInterface $kernel)
+    public function setKernel(KernelInterface $kernel): void
     {
         $this->kernel = $kernel;
     }
@@ -38,160 +53,160 @@ class ImportTerytCommandContext implements KernelAwareContext
     /**
      * @Given /^"([^"]*)" file have following content:$/
      */
-    public function xmlFileHaveFollowingContent($fileName, PyStringNode $fileContent)
+    public function xmlFileHaveFollowingContent(string $fileName, PyStringNode $fileContent): void
     {
-        $targetFolder = sprintf("%s/Project/app/teryt", $this->fixturesPath);
-        if (!file_exists($targetFolder)) {
-            mkdir($targetFolder);
+        $targetFolder = sprintf('%s/teryt', $this->fixturesPath);
+        if (!file_exists($targetFolder) && !mkdir($targetFolder) && !is_dir($targetFolder)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $targetFolder));
         }
 
-        $filePath = sprintf("%s/%s", $targetFolder, $fileName);
+        $filePath = sprintf('%s/%s', $targetFolder, $fileName);
         file_put_contents($filePath, $fileContent->getRaw());
-        expect(file_exists($filePath))->toBe(true);
+        Assertion::true(file_exists($filePath));
     }
 
     /**
      * @Given /^there are no provinces in database$/
      */
-    public function thereAreNoProvincesInDatabase()
+    public function thereAreNoProvincesInDatabase(): void
     {
-        expect($this->getProvinceRepository()
-            ->findAll())->toBe(array());
+        Assertion::same($this->getProvinceRepository()->findAll(), []);
     }
 
     /**
      * @Given /^there are no districts in database$/
      */
-    public function thereAreNoDistrictsInDatabase()
+    public function thereAreNoDistrictsInDatabase(): void
     {
-        expect($this->getDistrictRepository()
-            ->findAll())->toBe(array());
+        Assertion::same($this->getDistrictRepository()->findAll(), []);
     }
 
     /**
      * @Given /^there are no communities in database$/
      */
-    public function thereAreNoCommunitiesInDatabase()
+    public function thereAreNoCommunitiesInDatabase(): void
     {
-        expect($this->getCommunityRepository()
-            ->findAll())->toBe(array());
+        Assertion::same($this->getCommunityRepository()->findAll(), []);
     }
 
     /**
      * @Given /^places dictionary table in database is empty$/
      */
-    public function placesDictionaryTableInDatabaseIsEmpty()
+    public function placesDictionaryTableInDatabaseIsEmpty(): void
     {
-        expect($this->getPlaceTypeRepository()
-            ->findAll())->toBe(array());
+        Assertion::same($this->getPlaceTypeRepository()->findAll(), []);
     }
 
     /**
      * @Given /^places table in database is empty$/
      */
-    public function placesTableInDatabaseIsEmpty()
+    public function placesTableInDatabaseIsEmpty(): void
     {
-        expect($this->getPlaceRepository()
-            ->findAll())->toBe(array());
+        Assertion::same($this->getPlaceRepository()->findAll(), []);
     }
 
     /**
      * @Given /^there are no streets in database$/
      */
-    public function thereAreNoStreetsInDatabase()
+    public function thereAreNoStreetsInDatabase(): void
     {
-        expect($this->getStreetRepository()
-            ->findAll())->toBe(array());
+        Assertion::same($this->getStreetRepository()->findAll(), []);
     }
 
     /**
      * @Then /^following province should exist in database$/
      */
-    public function followingProvinceShouldExistInDatabase(TableNode $table)
+    public function followingProvinceShouldExistInDatabase(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getProvinceRepository()->findOneByCode($row['Code']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\Province');
-            expect($entity->getName())->toBe($row['Name']);
+            /** @var Province|null $entity */
+            $entity = $this->getProvinceRepository()->findOneBy(['code' => $row['Code']]);
+            Assertion::isInstanceOf($entity, Province::class);
+            Assertion::same($entity->getName(), $row['Name']);
         }
     }
 
     /**
      * @Then /^following district should exist in database$/
      */
-    public function followingDistrictShouldExistInDatabase(TableNode $table)
+    public function followingDistrictShouldExistInDatabase(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getDistrictRepository()->findOneByCode($row['Code']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\District');
-            expect($entity->getName())->toBe($row['Name']);
-            expect($entity->getProvince()->getName())->toBe($row['Province']);
+            /** @var District|null $entity */
+            $entity = $this->getDistrictRepository()->findOneBy(['code' => $row['Code']]);
+            Assertion::isInstanceOf($entity, District::class);
+            Assertion::same($entity->getName(), $row['Name']);
+            Assertion::same($entity->getProvince()->getName(), $row['Province']);
         }
     }
 
     /**
      * @Then /^following communities should exist in database$/
      */
-    public function followingCommunitiesShouldExistInDatabase(TableNode $table)
+    public function followingCommunitiesShouldExistInDatabase(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getCommunityRepository()->findOneByCode($row['Code']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\Community');
-            expect($entity->getName())->toBe($row['Name']);
-            expect($entity->getDistrict()->getName())->toBe($row['District']);
-            expect($entity->getType()->getName())->toBe($row['Community type']);
+            /** @var Community|null $entity */
+            $entity = $this->getCommunityRepository()->findOneBy(['code' => $row['Code']]);
+            Assertion::isInstanceOf($entity, Community::class);
+            Assertion::same($entity->getName(), $row['Name']);
+            Assertion::same($entity->getDistrict()->getName(), $row['District']);
+            Assertion::same($entity->getType()->getName(), $row['Community type']);
         }
     }
 
     /**
      * @Then /^following community types should exist in database$/
      */
-    public function followingCommunityTypesShouldExistInDatabase(TableNode $table)
+    public function followingCommunityTypesShouldExistInDatabase(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getCommunityTypeRepository()->findOneByType($row['Type']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\CommunityType');
-            expect($entity->getName())->toBe($row['Name']);
+            /** @var CommunityType|null $entity */
+            $entity = $this->getCommunityTypeRepository()->findOneBy(['type' => $row['Type']]);
+            Assertion::isInstanceOf($entity, CommunityType::class);
+            Assertion::same($entity->getName(), $row['Name']);
         }
     }
 
     /**
      * @Then /^places dictionary table in database should have following records$/
      */
-    public function placesDictionaryTableInDatabaseShouldHaveFollowingRecords(TableNode $table)
+    public function placesDictionaryTableInDatabaseShouldHaveFollowingRecords(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getPlaceTypeRepository()->findOneByType($row['Type']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\PlaceType');
-            expect($entity->getName())->toBe($row['Name']);
+            /** @var PlaceType|null $entity */
+            $entity = $this->getPlaceTypeRepository()->findOneBy(['type' => $row['Type']]);
+            Assertion::isInstanceOf($entity, PlaceType::class);
+            Assertion::same($entity->getName(), $row['Name']);
         }
     }
 
     /**
      * @Then /^places table in database should have following records$/
      */
-    public function placesTableInDatabaseShouldHaveFollowingRecords(TableNode $table)
+    public function placesTableInDatabaseShouldHaveFollowingRecords(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getPlaceRepository()->findOneById($row['Identity']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\Place');
-            expect($entity->getName())->toBe($row['Name']);
-            expect($entity->getType()->getName())->toBe($row['Place type']);
-            expect($entity->getCommunity()->getName())->toBe($row['Community']);
+            /** @var Place|null $entity */
+            $entity = $this->getPlaceRepository()->find($row['Identity']);
+            Assertion::isInstanceOf($entity, Place::class);
+            Assertion::same($entity->getName(), $row['Name']);
+            Assertion::same($entity->getType()->getName(), $row['Place type']);
+            Assertion::same($entity->getCommunity()->getName(), $row['Community']);
             if (!empty($row['Parent place'])) {
-                expect($entity->getParentPlace()->getName())->toBe($row['Parent place']);
+                Assertion::same($entity->getParentPlace()->getName(), $row['Parent place']);
             }
         }
     }
@@ -199,96 +214,85 @@ class ImportTerytCommandContext implements KernelAwareContext
     /**
      * @Then /^following streets should exist in database$/
      */
-    public function followingStreetsShouldExistInDatabase(TableNode $table)
+    public function followingStreetsShouldExistInDatabase(TableNode $table): void
     {
         $tableHash = $table->getHash();
 
         foreach ($tableHash as $row) {
-            $entity = $this->getStreetRepository()->findOneById($row['Identity']);
-            expect($entity)->toBeAnInstanceOf('FSi\Bundle\TerytDatabaseBundle\Entity\Street');
-            expect($entity->getId())->toBe((int) $row['Identity']);
-            expect($entity->getName())->toBe($row['Name']);
-            expect($entity->getType())->toBe($row['Type']);
-            expect((string) $entity->getAdditionalName())->toBe($row['Additional name']);
-            expect($entity->getPlace()->getName())->toBe($row['Place']);
+            $entity = $this->getStreetRepository()->findOneBy(['id' => $row['Identity']]);
+            Assertion::isInstanceOf($entity, Street::class);
+            Assertion::same($entity->getId(), (int) $row['Identity']);
+            Assertion::same($entity->getName(), $row['Name']);
+            Assertion::same($entity->getType(), $row['Type']);
+            Assertion::same((string) $entity->getAdditionalName(), $row['Additional name']);
+            Assertion::same($entity->getPlace()->getName(), $row['Place']);
         }
     }
 
     /**
-     * @return mixed
+     * @return EntityRepository<Province>
      */
-    private function getProvinceRepository()
+    private function getProvinceRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:Province');
+        return $this->getManager()->getRepository(Province::class);
     }
 
     /**
-     * @return mixed
+     * @return EntityRepository<District>
      */
-    private function getDistrictRepository()
+    private function getDistrictRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:District');
+        return $this->getManager()->getRepository(District::class);
     }
 
     /**
-     * @return mixed
+     * @return EntityRepository<Community>
      */
-    private function getCommunityRepository()
+    private function getCommunityRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:Community');
+        return $this->getManager()->getRepository(Community::class);
     }
 
     /**
-     * @return mixed
+     * @return EntityRepository<PlaceType>
      */
-    private function getPlaceTypeRepository()
+    private function getPlaceTypeRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:PlaceType');
+        return $this->getManager()->getRepository(PlaceType::class);
     }
 
     /**
-     * @return mixed
+     * @return EntityRepository<CommunityType>
      */
-    private function getCommunityTypeRepository()
+    private function getCommunityTypeRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:CommunityType');
+        return $this->getManager()->getRepository(CommunityType::class);
     }
 
-    private function getPlaceRepository()
+    /**
+     * @return EntityRepository<Place>
+     */
+    private function getPlaceRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:Place');
+        return $this->getManager()->getRepository(Place::class);
     }
 
-    private function getStreetRepository()
+    /**
+     * @return EntityRepository<Street>
+     */
+    private function getStreetRepository(): EntityRepository
     {
-        return $this->kernel
-            ->getContainer()
-            ->get('doctrine')
-            ->getManager()
-            ->getRepository('FSiTerytDbBundle:Street');
+        return $this->getManager()->getRepository(Street::class);
+    }
+
+    private function getManager(): EntityManagerInterface
+    {
+        $managerRegistry = $this->kernel->getContainer()->get(ManagerRegistry::class);
+        Assertion::isInstanceOf($managerRegistry, ManagerRegistry::class);
+
+        $manager = $managerRegistry->getManager();
+        Assertion::isInstanceOf($manager, EntityManagerInterface::class);
+
+        return $manager;
     }
 }

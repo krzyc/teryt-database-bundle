@@ -1,5 +1,5 @@
-/vendor
+teryt
+vendor
 composer.lock
 composer.phar
-autoload.php
-bin
+.phpcs-cache

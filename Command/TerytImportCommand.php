@@ -7,19 +7,29 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Command;
 
-use Doctrine\Common\Persistence\ObjectManager;
+use Assert\Assertion;
+use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\ObjectManager;
+use FSi\Bundle\TerytDatabaseBundle\Teryt\Import\NodeConverter;
 use Hobnob\XmlStreamReader\Parser;
 use SimpleXMLElement;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-abstract class TerytImportCommand extends ContainerAwareCommand
+abstract class TerytImportCommand extends Command
 {
-    const FLUSH_FREQUENCY = 2000;
+    public const FLUSH_FREQUENCY = 2000;
+
+    /**
+     * @var ManagerRegistry
+     */
+    private $managerRegistry;
 
     /** @var resource */
     protected $handle;
@@ -29,28 +39,26 @@ abstract class TerytImportCommand extends ContainerAwareCommand
      */
     private $progressBar;
 
+    /**
+     * @var int
+     */
     private $recordsCount = 0;
 
-    public function __construct(\FSi\Bundle\TerytDatabaseBundle\Teryt\Api\Client $api_client)
+    public function __construct(ManagerRegistry $managerRegistry)
     {
         parent::__construct();
+
+        $this->managerRegistry = $managerRegistry;
     }
 
-    /**
-     * @param SimpleXMLElement $node
-     * @param \Doctrine\Common\Persistence\ObjectManager $om
-     * @return \FSi\Bundle\TerytDatabaseBundle\Teryt\Import\NodeConverter
-     */
-    abstract public function getNodeConverter(SimpleXMLElement $node, ObjectManager $om);
+    abstract public function getNodeConverter(SimpleXMLElement $node, ObjectManager $om): NodeConverter;
 
-    /**
-     * @return string
-     */
-    abstract protected function getRecordXPath();
+    abstract protected function getRecordXPath(): string;
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): ?int
     {
         $xmlFile = $input->getArgument('file');
+        Assertion::string($xmlFile);
 
         if (!file_exists($xmlFile)) {
             $output->writeln(sprintf('File %s does not exist', $xmlFile));
@@ -59,7 +67,9 @@ abstract class TerytImportCommand extends ContainerAwareCommand
 
         $xmlParser = $this->createXmlParser();
 
-        $this->progressBar = new ProgressBar($output, filesize($xmlFile));
+        $fileSize = filesize($xmlFile);
+        Assertion::integer($fileSize);
+        $this->progressBar = new ProgressBar($output, $fileSize);
         $this->progressBar->start();
 
         $this->importXmlFile($xmlParser, $xmlFile);
@@ -72,11 +82,7 @@ abstract class TerytImportCommand extends ContainerAwareCommand
         return 0;
     }
 
-    /**
-     * @return Parser
-     * @throws \Exception
-     */
-    private function createXmlParser()
+    private function createXmlParser(): Parser
     {
         $xmlParser = new Parser();
 
@@ -86,10 +92,7 @@ abstract class TerytImportCommand extends ContainerAwareCommand
         );
     }
 
-    /**
-     * @return callable
-     */
-    private function getNodeParserCallbackFunction()
+    private function getNodeParserCallbackFunction(): callable
     {
         $counter = static::FLUSH_FREQUENCY;
 
@@ -99,52 +102,45 @@ abstract class TerytImportCommand extends ContainerAwareCommand
 
             $this->recordsCount++;
             $counter--;
-            if (!$counter) {
+            if ($counter === 0) {
                 $counter = static::FLUSH_FREQUENCY;
                 $this->flushAndClear();
             }
         };
     }
 
-    /**
-     * @param SimpleXMLElement $node
-     */
-    private function convertNodeToPersistedEntity(SimpleXMLElement $node)
+    private function convertNodeToPersistedEntity(SimpleXMLElement $node): void
     {
         $om = $this->getObjectManager();
-        $converter = $this->getNodeConverter($node, $om);
-        $om->persist(
-            $converter->convertToEntity()
-        );
+        $om->persist($this->getNodeConverter($node, $om)->convertToEntity());
     }
 
-    private function updateProgressHelper()
+    private function updateProgressHelper(): void
     {
-        $this->progressBar->setProgress(ftell($this->handle));
+        $pos = ftell($this->handle);
+        Assertion::integer($pos);
+
+        $this->progressBar->setProgress($pos);
     }
 
-    private function flushAndClear()
+    private function flushAndClear(): void
     {
         $this->getObjectManager()->flush();
         $this->getObjectManager()->clear();
     }
 
-    /**
-     * @param Parser $xmlParser
-     * @param string $xmlFile
-     */
-    private function importXmlFile(Parser $xmlParser, $xmlFile)
+    private function importXmlFile(Parser $xmlParser, string $xmlFile): void
     {
-        $this->handle = fopen($xmlFile, 'r');
+        $handle = fopen($xmlFile, 'rb');
+        Assertion::isResource($handle);
+
+        $this->handle = $handle;
         $xmlParser->parse($this->handle);
         fclose($this->handle);
     }
 
-    /**
-     * @return ObjectManager
-     */
-    private function getObjectManager()
+    private function getObjectManager(): ObjectManager
     {
-        return $this->getContainer()->get('doctrine')->getManager();
+        return $this->managerRegistry->getManager();
     }
 }

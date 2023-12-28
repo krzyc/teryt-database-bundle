@@ -7,15 +7,18 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Command;
 
+use Assert\Assertion;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class TerytDownloadPlacesDictionaryDatabaseCommand extends TerytDownloadCommand
 {
-    protected function configure()
+    protected function configure(): void
     {
         $this->setName('teryt:download:places-dictionary')
             ->setDescription('Download teryt places dictionary (WMRODZ) database files')
@@ -32,12 +35,20 @@ class TerytDownloadPlacesDictionaryDatabaseCommand extends TerytDownloadCommand
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): ?int
     {
+        $target = $input->getArgument('target');
+        Assertion::nullOrString($target);
+
+        $fileName = $input->getArgument('filename');
+        Assertion::string($fileName);
+
         $this->saveFile(
             $this->getApiClient()->getPlacesDictionaryData(),
-            $input->getArgument('target') ?? $this->getDefaultTargetPath(),
-            $input->getArgument('filename')
+            $target ?? $this->getDefaultTargetPath(),
+            $fileName
         );
+
+        return 0;
     }
 }

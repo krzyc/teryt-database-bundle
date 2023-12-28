@@ -7,14 +7,17 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\Model\Place;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 class Type
 {
     /**
-     * @var string
+     * @var int
      */
     protected $type;
 
@@ -24,50 +27,36 @@ class Type
     protected $name;
 
     /**
-     * @var \Doctrine\Common\Collections\ArrayCollection
+     * @var Collection<int, Place>
      */
     protected $places;
 
-    /**
-     * @param int $type
-     */
-    function __construct($type)
+    public function __construct(int $type, string $name)
     {
         $this->type = $type;
+        $this->name = $name;
         $this->places = new ArrayCollection();
     }
 
-    /**
-     * @return mixed
-     */
-    public function getType()
+    public function getType(): int
     {
         return $this->type;
     }
 
-    /**
-     * @param mixed $name
-     * @return \FSi\Bundle\TerytDatabaseBundle\Model\Place\Type
-     */
-    public function setName($name)
+    public function setName(string $name): void
     {
         $this->name = $name;
-
-        return $this;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
 
     /**
-     * @return ArrayCollection
+     * @return Collection<int, Place>
      */
-    public function getPlaces()
+    public function getPlaces(): Collection
     {
         return $this->places;
     }

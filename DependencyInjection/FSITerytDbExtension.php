@@ -7,6 +7,8 @@
  * file that was distributed with this source code.
  */
 
+declare(strict_types=1);
+
 namespace FSi\Bundle\TerytDatabaseBundle\DependencyInjection;
 
 use Symfony\Component\Config\FileLocator;
@@ -16,10 +18,7 @@ use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class FSITerytDbExtension extends Extension
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function load(array $configs, ContainerBuilder $container)
+    public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
@@ -28,7 +27,7 @@ class FSITerytDbExtension extends Extension
         $container->setParameter('fsi_teryt_db.api.username', $config['api']['username']);
         $container->setParameter('fsi_teryt_db.api.password', $config['api']['password']);
 
-        $loader = new XmlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
+        $loader = new XmlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.xml');
     }
 }
