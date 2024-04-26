@@ -52,29 +52,16 @@ class Street
         return $this->place;
     }
 
-    /**
-     * @param Place $placce
-     * @return Street
-     */
-    public function setPlace($place)
+    public function setPlace(Place $place): void
     {
         $this->place = $place;
-
-        return $this;
     }
 
-    /**
-     * @return int
-     */
     public function getId(): int
     {
         return $this->id;
     }
 
-    /**
-     * @param string $additionalName
-     * @return Street
-     */
     public function setAdditionalName(?string $additionalName): void
     {
         $this->additionalName = $additionalName;
