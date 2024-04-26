@@ -19,11 +19,6 @@ class Street
     protected $id;
 
     /**
-     * @var int
-     */
-    protected $street_id;
-
-    /**
      * @var string
      */
     protected $type;
@@ -74,25 +69,6 @@ class Street
     public function getId(): int
     {
         return $this->id;
-    }
-
-    /**
-     * @return int
-     */
-    public function getStreetId()
-    {
-        return $this->street_id;
-    }
-
-    /**
-     * @param int $street_id
-     * @return Street
-     */
-    public function setStreetId($street_id)
-    {
-        $this->street_id = $street_id;
-
-        return $this;
     }
 
     /**
