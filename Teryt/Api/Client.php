@@ -42,8 +42,6 @@ class Client
         $this->url = $url;
         $this->username = $username;
         $this->password = $password;
-
-        $this->initClient();
     }
 
     public function getTerritorialDivisionData(): SplTempFileObject
@@ -83,6 +81,10 @@ class Client
      */
     private function makeCall(string $functionName, array $args)
     {
+        if (!$this->soapClient) {
+            $this->initClient();
+        }
+
         return $this->soapClient->__soapCall($functionName, [$args]);
     }
 
@@ -96,6 +98,13 @@ class Client
 
     private function initClient(): void
     {
+        if (!extension_loaded('soap')) {
+            throw new \Exception('teryt-database-bundle: SoapClient extension not available.');
+        }
+        if (!$this->url || !$this->username || !$this->password) {
+            throw new \Exception('teryt-database-bundle: Please set url, username and password.');
+        }
+
         $this->soapClient = new TerytSoapClient($this->url, [
             'soap_version' => SOAP_1_1,
             'exceptions' => true,
